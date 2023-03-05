@@ -10,6 +10,7 @@
 
 package eu.apps4net;
 
+import java.util.StringTokenizer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -92,15 +93,24 @@ public class WordsInMovies {
 
             movie = new Movie(movieArray);
 
-            // Προσθήκη του έτους στο context του mapper
-            word.set(movie.getYear());
+            StringTokenizer itr = new StringTokenizer(movie.getTitle());
+            while (itr.hasMoreTokens()) {
+                // Reads each word and removes (strips) the white space
+                String token = itr.nextToken().strip();
 
-            try {
-                one.set(1);
+                if(token.length() < 4) {
+                    continue;
+                }
 
-                context.write(word, one);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
+                word.set(String.valueOf(token));
+
+                try {
+                    one.set(1);
+
+                    context.write(word, one);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
             }
         }
     }
@@ -193,7 +203,10 @@ public class WordsInMovies {
         }
 
         public String getTitle() {
-            return title;
+            return title.replaceAll("[^\\p{L}\\p{Nd}\\s]", "")
+                    .replaceAll("\\p{C}", "")
+                    .replaceAll("\\s+", " ")
+                    .toLowerCase();
         }
 
         public String getYear() {
