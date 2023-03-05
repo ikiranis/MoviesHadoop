@@ -1,12 +1,21 @@
+/**
+ * Created by Yiannis Kiranis <yiannis.kiranis@gmail.com>
+ * https://apps4net.eu
+ * Date: 5/3/23
+ * Time: 7:12 μ.μ.
+ *
+ * Υπολογισμός των ταινιών που ανήκουν σε κάθε είδος
+ *
+ */
+
 package eu.apps4net;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -14,14 +23,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-/**
- * Created by Yiannis Kiranis <yiannis.kiranis@gmail.com>
- * https://apps4net.eu
- * Date: 5/3/23
- * Time: 7:12 μ.μ.
- */
-
-public class Movies {
+public class MoviesInGenres {
 
     /**
      * This method uses a regular expression to split each line to a list of strings,
@@ -64,9 +66,8 @@ public class Movies {
         }
     }
 
-    public static class TokenizerMapper extends Mapper<Object, Text, Text, LongWritable> {
-
-        private final static LongWritable movieId = new LongWritable();
+    public static class MoviesMapper extends Mapper<Object, Text, Text, IntWritable> {
+        private final static IntWritable one = new IntWritable();
         private final Text word = new Text();
 
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
@@ -74,38 +75,36 @@ public class Movies {
 
             String line = value.toString();
 
-            // Ignore the first line
+            // Αν η γραμμή είναι η επικεφαλίδα του αρχείου, τότε την παραλείπουμε
             if (line.startsWith("imdbID,")) {
                 return;
             }
 
             String movieTitle = "";
 
-            System.out.println(line);
             // Σπάει τη γραμμή σε στοιχεία
             String[] movieArray = processLine(line);
 
-            if(movieArray != null) {
-                // Δημιουργία αντικειμένου Tweet
-                movie = new Movie(movieArray);
-
-                System.out.println(movie);
-                // Παίρνει καθαρό κείμενο από το Tweet
-                movieTitle = movie.getTitle();
+            // Αν η γραμμή δεν έχει τον αριθμό των στοιχείων που πρέπει, τότε την παραλείπουμε
+            if(movieArray == null) {
+                return;
             }
 
-            StringTokenizer itr = new StringTokenizer(movieTitle);
-            while (itr.hasMoreTokens()) {
-                // Reads each word and removes (strips) the white space
-                String token = itr.nextToken().strip();
+            movie = new Movie(movieArray);
 
-//                System.out.println(token);
-                word.set(String.valueOf(token));
+            // Αν η ταινία δεν έχει είδη, τότε την παραλείπουμε
+            if(movie.getGenres().size() == 0) {
+                return;
+            }
+
+            // Προσθέτει κάθε είδος ταινίας στο context του mapper
+            for(Genre genre : movie.getGenres()) {
+                word.set(genre.getName());
 
                 try {
-                    movieId.set(1);
+                    one.set(1);
 
-                    context.write(word, movieId);
+                    context.write(word, one);
                 } catch (Exception e) {
                     System.out.println(e.getMessage());
                 }
@@ -113,17 +112,17 @@ public class Movies {
         }
     }
 
-    public static class MoviesReducer extends Reducer<Text, LongWritable, Text, Text> {
-        private final Text result = new Text();
+    public static class MoviesReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+        private final IntWritable result = new IntWritable();
 
-        public void reduce(Text key, Iterable<LongWritable> values, Context context) throws IOException, InterruptedException {
-            StringBuilder text = new StringBuilder();
+        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+            int sum = 0;
 
-            for (LongWritable val : values) {
-                text.append(String.valueOf(val)).append(" ");
+            for (IntWritable val : values) {
+                sum += val.get();
             }
 
-            result.set(String.valueOf(text));
+            result.set(sum);
 
             context.write(key, result);
         }
@@ -132,26 +131,29 @@ public class Movies {
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "Movies");
-        job.setJarByClass(Movies.class);
-        job.setMapperClass(TokenizerMapper.class);
-//        job.setReducerClass(MoviesReducer.class);
+        job.setJarByClass(MoviesInGenres.class);
+        job.setMapperClass(MoviesMapper.class);
+        job.setReducerClass(MoviesReducer.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(LongWritable.class);
+        job.setOutputValueClass(IntWritable.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 
+    /**
+     * Αντικείμενο για την αποθήκευση των δεδομένων της ταινίας
+     */
     public static class Movie {
-        private int id;
-        private String title;
-        private String year;
-        private String runtime;
-        private ArrayList<Genre> genres;
-        private String released;
-        private String imdbRating;
-        private String imdbVotes;
-        private String country;
+        private final int id;
+        private final String title;
+        private final String year;
+        private final String runtime;
+        private final ArrayList<Genre> genres;
+        private final String released;
+        private final String imdbRating;
+        private final String imdbVotes;
+        private final String country;
 
         public Movie(String[] movieArray) {
             this.id = Integer.parseInt(movieArray[0]);
@@ -160,11 +162,20 @@ public class Movies {
             this.runtime = movieArray[3];
             this.genres = new ArrayList<>();
 
-            // Παίρνει τα είδη ταινίας
+            // Αφαίρεση των εισαγωγικών από το string
+            movieArray[4] = movieArray[4].replaceAll("\"", "");
+
+            // Σπάει το string σε πίνακα με βάση τον χαρακτήρα ","
             String[] genresArray = movieArray[4].split(",");
 
+            // Προσθήκη των genres στη λίστα, αφαιρώντας τα πιθανά κενά
             for (String genre : genresArray) {
-                this.genres.add(new Genre(genre));
+                // Αν το string είναι κενό, τότε παραλείπεται
+                if(genre.equals("")) {
+                    continue;
+                }
+
+                this.genres.add(new Genre(genre.strip()));
             }
 
             this.released = movieArray[5];
@@ -191,10 +202,17 @@ public class Movies {
         public String getTitle() {
             return title;
         }
+
+        public ArrayList<Genre> getGenres() {
+            return genres;
+        }
     }
 
+    /**
+     * Κλάση για τα είδη ταινιών
+     */
     public static class Genre {
-        private String name;
+        private final String name;
 
         public Genre(String name) {
             this.name = name;
@@ -205,6 +223,10 @@ public class Movies {
             return "Genre{" +
                     "name='" + name + '\'' +
                     '}';
+        }
+
+        public String getName() {
+            return name;
         }
     }
 }
