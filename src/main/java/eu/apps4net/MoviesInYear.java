@@ -4,14 +4,11 @@
  * Date: 5/3/23
  * Time: 7:12 μ.μ.
  *
- * Υπολογισμός των ταινιών που ανήκουν σε κάθε είδος
+ * Υπολογισμός των ταινιών που γυρίστηκαν ανα έτος
  *
  */
 
 package eu.apps4net;
-
-import java.io.IOException;
-import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -23,7 +20,10 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-public class MoviesInGenres {
+import java.io.IOException;
+import java.util.ArrayList;
+
+public class MoviesInYear {
 
     /**
      * This method uses a regular expression to split each line to a list of strings,
@@ -92,22 +92,15 @@ public class MoviesInGenres {
 
             movie = new Movie(movieArray);
 
-            // Αν η ταινία δεν έχει είδη, τότε την παραλείπουμε
-            if(movie.getGenres().size() == 0) {
-                return;
-            }
+            // Προσθήκη του έτους στο context του mapper
+            word.set(movie.getYear());
 
-            // Προσθέτει κάθε είδος ταινίας στο context του mapper
-            for(Genre genre : movie.getGenres()) {
-                word.set(genre.getName());
+            try {
+                one.set(1);
 
-                try {
-                    one.set(1);
-
-                    context.write(word, one);
-                } catch (Exception e) {
-                    System.out.println(e.getMessage());
-                }
+                context.write(word, one);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
             }
         }
     }
@@ -130,8 +123,8 @@ public class MoviesInGenres {
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "Movies in genres");
-        job.setJarByClass(MoviesInGenres.class);
+        Job job = Job.getInstance(conf, "Movies in year");
+        job.setJarByClass(MoviesInYear.class);
         job.setMapperClass(MoviesMapper.class);
         job.setReducerClass(MoviesReducer.class);
         job.setOutputKeyClass(Text.class);
@@ -201,6 +194,10 @@ public class MoviesInGenres {
 
         public String getTitle() {
             return title;
+        }
+
+        public String getYear() {
+            return year;
         }
 
         public ArrayList<Genre> getGenres() {
