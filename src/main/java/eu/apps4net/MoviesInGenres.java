@@ -80,8 +80,6 @@ public class MoviesInGenres {
                 return;
             }
 
-            String movieTitle = "";
-
             // Σπάει τη γραμμή σε στοιχεία
             String[] movieArray = processLine(line);
 

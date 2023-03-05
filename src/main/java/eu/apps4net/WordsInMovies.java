@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class WordsInMovies {
+    private static int minimumWordAppearances = 100; // Αριθμός εμφανίσεων της λέξης για να εμφανιστεί στο αποτέλεσμα
 
     /**
      * This method uses a regular expression to split each line to a list of strings,
@@ -81,8 +82,6 @@ public class WordsInMovies {
                 return;
             }
 
-            String movieTitle = "";
-
             // Σπάει τη γραμμή σε στοιχεία
             String[] movieArray = processLine(line);
 
@@ -93,11 +92,13 @@ public class WordsInMovies {
 
             movie = new Movie(movieArray);
 
+            // Προσθήκη των λέξεων στο context του mapper
             StringTokenizer itr = new StringTokenizer(movie.getTitle());
             while (itr.hasMoreTokens()) {
                 // Reads each word and removes (strips) the white space
                 String token = itr.nextToken().strip();
 
+                // Αν η λέξη είναι μικρότερη από 4 χαρακτήρες, τότε την παραλείπουμε
                 if(token.length() < 4) {
                     continue;
                 }
@@ -125,9 +126,11 @@ public class WordsInMovies {
                 sum += val.get();
             }
 
-            result.set(sum);
+            if(sum > minimumWordAppearances) {
+                result.set(sum);
 
-            context.write(key, result);
+                context.write(key, result);
+            }
         }
     }
 
@@ -141,6 +144,11 @@ public class WordsInMovies {
         job.setOutputValueClass(IntWritable.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        if(args[2] != null) {
+            minimumWordAppearances = Integer.parseInt(args[2]);
+        }
+
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 
@@ -202,6 +210,12 @@ public class WordsInMovies {
                     '}';
         }
 
+        /**
+         * Καθαρίζει τον τίτλο της ταινίας από χαρακτήρες που δεν είναι γράμματα ή αριθμοί
+         * και τον μετατρέπει σε lowercase
+         *
+         * @return String
+         */
         public String getTitle() {
             return title.replaceAll("[^\\p{L}\\p{Nd}\\s]", "")
                     .replaceAll("\\p{C}", "")
