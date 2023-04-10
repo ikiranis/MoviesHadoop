@@ -47,7 +47,7 @@ public class MoviesInGenres {
      * Τα δεδομένα περνάνε σε αντικείμενο της κλάσης Movie
      * ,
      * @param line
-     * @return movie
+     * @return Movie
      */
     private static Movie getMovie(String line) {
         // Παίρνει σε array τα κομμάτια της γραμμής που χωρίζονται με ","
