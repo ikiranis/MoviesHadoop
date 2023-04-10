@@ -89,6 +89,7 @@ public class MoviesInYear {
                 return;
             }
 
+            // Διάβασμα της γραμμής και δημιουργία του αντικειμένου Movie
             movie = getMovie(line);
 
             // Προσθήκη του έτους στο context του mapper
@@ -110,10 +111,12 @@ public class MoviesInYear {
         public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
             int sum = 0;
 
+            // Καταμέτρηση των ταινιών που έχουν δημιουργηθεί στο συγκεκριμένο έτος
             for (IntWritable val : values) {
                 sum += val.get();
             }
 
+            // Εξαγωγή του αποτελέσματος στο context
             result.set(sum);
 
             context.write(key, result);

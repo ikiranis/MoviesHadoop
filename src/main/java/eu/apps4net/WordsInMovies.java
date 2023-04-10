@@ -91,21 +91,22 @@ public class WordsInMovies {
                 return;
             }
 
+            // Διάβασμα της γραμμής και δημιουργία του αντικειμένου Movie
             movie = getMovie(line);
 
             // Προσθήκη των λέξεων στο context του mapper
             StringTokenizer itr = new StringTokenizer(movie.getTitle());
             while (itr.hasMoreTokens()) {
-                // Διαβάζει την επόμενη λέξη και την μετατρέπει σε lowercase
-                // Αφαίρεση σημείων στίξης
+                // Διαβάζει την επόμενη λέξη και τη μετατρέπει σε lowercase, αφαιρώντας και τα σημεία στίξης
                 String token = itr.nextToken().toLowerCase().replaceAll("[^a-zA-Z0-9]", "");
 
-                // Αν η λέξη είναι μικρότερη από 4 χαρακτήρες, τότε την παραλείπουμε
+                // Αν η λέξη είναι μικρότερη από 4 χαρακτήρες, τότε την παραλείπει
                 if(token.length() < 4) {
                     continue;
                 }
 
-                word.set(String.valueOf(token));
+                // Εξαγωγή της λέξης στο context
+                word.set(token);
 
                 try {
                     one.set(1);
@@ -124,10 +125,12 @@ public class WordsInMovies {
         public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
             int sum = 0;
 
+            // Καταμέτρηση των εμφανίσεων της λέξης
             for (IntWritable val : values) {
                 sum += val.get();
             }
 
+            // Αν η λέξη έχει εμφανιστεί περισσότερες από minimumWordAppearances, τότε την εξάγει
             if(sum > minimumWordAppearances) {
                 result.set(sum);
 

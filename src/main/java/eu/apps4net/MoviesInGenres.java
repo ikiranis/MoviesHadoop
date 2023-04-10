@@ -89,6 +89,7 @@ public class MoviesInGenres {
                 return;
             }
 
+            // Διάβασμα της γραμμής και δημιουργία του αντικειμένου Movie
             movie = getMovie(line);
 
             // Αν η ταινία δεν έχει είδη, τότε την παραλείπει
