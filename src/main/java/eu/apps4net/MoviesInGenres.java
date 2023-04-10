@@ -84,14 +84,14 @@ public class MoviesInGenres {
 
             String line = value.toString();
 
-            // Αν η γραμμή είναι η επικεφαλίδα του αρχείου, τότε την παραλείπουμε
+            // Αν η γραμμή είναι η επικεφαλίδα του αρχείου, τότε την παραλείπει
             if (line.startsWith("movieId,")) {
                 return;
             }
 
             movie = getMovie(line);
 
-            // Αν η ταινία δεν έχει είδη, τότε την παραλείπουμε
+            // Αν η ταινία δεν έχει είδη, τότε την παραλείπει
             if(movie.getGenres().size() == 0) {
                 return;
             }
